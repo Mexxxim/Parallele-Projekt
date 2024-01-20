@@ -1,78 +1,85 @@
-from flask import Flask, render_template, jsonify, request
+from flask import render_template, request, Flask
 from flask_sqlalchemy import SQLAlchemy
 
-
+#connection to the database
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost:5432/postgres'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-
+#creates a table with there columns in the database
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    titel = db.Column(db.String(100), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
     author = db.Column(db.String(50))
     genre = db.Column(db.String(50))
 
+    def __repr__(self):
+        return f"Book: {self.titel}"
+    
+    def __init__(self, title, author, genre):
+        self.title = title
+        self.author = author
+        self.genre = genre
+        
 
+def format_Books(event):
+    return {
+        "id": event.id,
+        "title": event.title,
+        "author": event.author,
+        "genre": event.genre
+    }
+   
 @app.route('/')
 def index():
     return render_template('index.html')
 
-#define the route for submits for GET and POST to get the information 
-@app.route('/submit', methods=['GET','POST'])
-def submit():
-    if request.method == 'POST':
-        id= request.form['id']
-        title= request.form['title']
-        author= request.form['author']
-        genre= request.form['genre']
+#create a book
+@app.route('/events', methods=['POST'])
+def create_event():
+    title = request.json['title']
+    author = request.json['author']
+    genre = request.json['genre']
+    event = Book(title, author, genre)
+    db.session.add(event)
+    db.session.commit()
+    return format_Books(event)
 
-        book=Book(id,title,author,genre)
-        db.session.add(book)
-        db.session.commit()
+#get all books
+@app.route('/events', methods = ['GET'])
+def get_events():
+    events = Book.query.order_by(Book.id.asc()).all()
+    event_list = []
+    for event in events:
+        event_list.append(format_Books(event))
+    return {'events': event_list}
 
-# gets all books from the bookshelf
-@app.route('/Book', methods=['GET'])
-def get_books():
-    return Book
+#get a single book
+@app.route('/events/<id>', methods = ['GET'])
+def get_event(id):
+    event = Book.query.filter_by(id=id).one()
+    formatted_Books = format_Books(event)
+    return {'event': formatted_Books}
 
-# gets a single book from the Bookshelf by its id and return an error if its not found
-@app.route('/Book/<int:Book_id>', methods=['GET'])
-def get_book(book_id):
-    for book in Book:
-        if book['id']==book_id:
-            return book
-        
-    return{'error':'Book not in Shelf'}
+#delete a Book
+@app.route('/events/<id>', methods = ['DELETE'])
+def delete_book(id):
+    event = Book.query.filter_by(id=id).one()
+    db.session.delete(event)
+    db.session.commit()
+    return f'Book (id: {id}) removed from Shelf'
 
-# adds a new book to the Bookshelf
-@app.route('/Book', methods=['POST'])
-def create_book():
-    new_book={'id':len(Book)+1, 'titel':request.json['titel'], 'author':request.json['author']}
-    Book.append(new_book)
-    return new_book
-
-# updates the credentials of a book in the Bookshelf
-@app.route('/Bookshelf/<int:book_id>', methods=['PUT'])
-def update_book(book_id):
-    for book in Book:
-        if book['id']==book_id:
-            book['title']=request.json['title']
-            book['author']=request.json['author']
-            return book
-    return{'error':'Book not in Shelf'}
-
-# removes a book from the Bookshelf
-@app.route('/Book/<int:book_id>', methods=['DELETE'])
-def delete_book(book_id):
-    for book in Book:
-        if book['id']==book_id:
-            book.remove(book)
-            return{"data:""Successfully removed Book from Bookshelf"}
-        
-    return{'error':'Book not in Shelf'}
-
+#Edit a Book
+@app.route('/events/<id>', methods = ['PUT'])
+def update_book(id):
+    event = Book.query.filter_by(id=id)
+    title = request.json['title']
+    author = request.json['author']
+    genre = request.json['genre']
+    event.update(dict(title = title, author = author, genre = genre))
+    db.session.commit()
+    return {'event': format_Books(event.one())}
 
 # runs app in degub mode to show the full error
 if __name__ == '__main__':

@@ -1,11 +1,13 @@
-from flask import render_template, request, Flask
+from flask import request, Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 #connection to the database
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:postgres@localhost/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+CORS(app)
 
 #creates a table with there columns in the database
 class Book(db.Model):
@@ -31,10 +33,6 @@ def format_Books(event):
         "genre": event.genre
     }
    
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 #create a book
 @app.route('/events', methods=['POST'])
 def create_event():

@@ -9,7 +9,7 @@ services:
     networks:
       - library
 
-backend:
+  Backend:
     build:
       context: /Bookshelf/Backend
     environment:
@@ -35,3 +35,4 @@ backend:
 networks:
   library:
     driver: bridge
+

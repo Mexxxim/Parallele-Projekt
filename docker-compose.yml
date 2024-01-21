@@ -3,15 +3,15 @@ version: '3'
 services:
   postgres:
     build: 
-      context: /DB
+      context: ./db
     ports:
       - "5432:5432"
     networks:
       - library
 
-  Backend:
+  backend:
     build:
-      context: /Bookshelf/Backend
+      context: ./bookshelf/backend
     environment:
       - DB_HOST=backend
       - DB_CONNECTION_STRING=postgres://postgres:postgres@postgres:5432/postgres
@@ -24,13 +24,13 @@ services:
 
   frontend:
     build:
-      context: /Bookshelf/frontend
+      context: ./bookshelf/frontend
     ports:
       - "3000:3000"
     networks:
       - library
     depends_on:
-      - Backend
+      - backend
 
 networks:
   library:
